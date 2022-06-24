@@ -27,6 +27,8 @@ exports.getLogin = (req, res, next) => {
     path: '/login',
     pageTitle: 'Login',
     errorMessage: message,
+    oldInput: { email: '' },
+    validationErrors: [],
   });
 };
 
@@ -41,6 +43,8 @@ exports.getSignup = (req, res, next) => {
     path: '/signup',
     pageTitle: 'Signup',
     errorMessage: message,
+    oldInput: { email: '' },
+    validationErrors: [],
   });
 };
 
@@ -50,18 +54,25 @@ exports.postLogin = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    return res.render('auth/login', {
+    return res.status(422).render('auth/login', {
       path: '/login',
       pageTitle: 'Login',
       errorMessage: errors.array()[0].msg,
+      oldInput: { email: email },
+      validationErrors: errors.array(),
     });
   }
 
   User.findOne({ email: email })
     .then((user) => {
       if (!user) {
-        req.flash('error', 'Invalid email or password.');
-        return res.redirect('/login');
+        return res.status(422).render('auth/login', {
+          path: '/login',
+          pageTitle: 'Login',
+          errorMessage: 'Invalid email or password.',
+          oldInput: { email: email },
+          validationErrors: [],
+        });
       }
       bcrypt
         .compare(password, user.password)
@@ -74,8 +85,13 @@ exports.postLogin = (req, res, next) => {
               res.redirect('/');
             });
           }
-          req.flash('error', 'Invalid email or password.');
-          res.redirect('/login');
+          return res.status(422).render('auth/login', {
+            path: '/login',
+            pageTitle: 'Login',
+            errorMessage: 'Invalid email or password.',
+            oldInput: { email: email },
+            validationErrors: [],
+          });
         })
         .catch((err) => {
           res.redirect('/login');
@@ -94,6 +110,8 @@ exports.postSignup = (req, res, next) => {
       path: '/signup',
       pageTitle: 'Signup',
       errorMessage: errors.array()[0].msg,
+      oldInput: { email: email },
+      validationErrors: errors.array(),
     });
   }
   bcrypt
